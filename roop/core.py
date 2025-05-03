@@ -44,6 +44,18 @@ if 'ROCMExecutionProvider' in roop.globals.execution_providers:
 warnings.filterwarnings('ignore', category=FutureWarning, module='insightface')
 warnings.filterwarnings('ignore', category=UserWarning, module='torchvision')
 
+def parse_args() -> None:
+    signal.signal(signal.SIGINT, lambda signal_number, frame: destroy())
+    roop.globals.headless = False
+
+    program = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=100))
+    program.add_argument('--server_share', help='Public server', dest='server_share', action='store_true', default=False)
+    program.add_argument('--cuda_device_id', help='Index of the CUDA GPU to use', dest='cuda_device_id', type=int, default=0)
+    program.add_argument('--input_face', help='Path to the input face image', dest='input_face', type=str, required=False)
+    program.add_argument('--target_video', help='Path to the target video', dest='target_video', type=str, required=False)
+    program.add_argument('--fps', help='Frames per second for processing', dest='fps', type=int, required=False, default=30)
+    program.add_argument('--model', help='Model to use for face swapping', dest='model', type=str, required=False, default='InSwapper 128')
+    roop.globals.startup_args = program.parse_args()
 
 def parse_args() -> None:
     signal.signal(signal.SIGINT, lambda signal_number, frame: destroy())
@@ -390,6 +402,21 @@ def destroy() -> None:
     release_resources()        
     sys.exit()
 
+def run() -> None:
+    parse_args()
+    if roop.globals.startup_args.input_face:
+        roop.globals.source_path = roop.globals.startup_args.input_face
+    if roop.globals.startup_args.target_video:
+        roop.globals.target_path = roop.globals.startup_args.target_video
+    if roop.globals.startup_args.fps:
+        roop.globals.keep_fps = roop.globals.startup_args.fps
+    if roop.globals.startup_args.model:
+        roop.globals.face_swap_mode = roop.globals.startup_args.model
+
+    # Proceed with the rest of the pipeline
+    if not pre_check():
+        return
+    main.run()
 
 def run() -> None:
     parse_args()
